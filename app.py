@@ -53,59 +53,36 @@ def collect_smhi_data(lat=latitude, lon=longitude):
     return df, "Success"
 
 
-# ========== YR ==========
-def collect_yr_data(lat=latitude, lon=longitude):
-    yr_api_url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
-    yr_weather_data = req.get(yr_api_url)
-
-    if yr_weather_data.status_code != 200:
-        return None, f"YR API error: {yr_weather_data.status_code}"
-
-    yr_weather_forecast = yr_weather_data.json()
-    forecast_data_yr = []
-    current_time = datetime.now()
-    hours_collected = 0
-
-    for data in yr_weather_forecast["properties"]["timeseries"]:
-        valid_time = data["time"]
-        forecast_datetime = datetime.fromisoformat(valid_time[:-1])
-
-        if forecast_datetime < current_time:
-            continue
-        if hours_collected >= 24:
-            break
-
-        forecast_date, forecast_hour = valid_time.split("T")
-        instant_parameters = data["data"]["instant"]["details"]
-        forecast_temp = instant_parameters.get("air_temperature", None)
-        next_1_hours_parameters = data["data"].get("next_1_hours", {}).get("details", {})
-        forecast_rain_or_snow = next_1_hours_parameters.get("probability_of_precipitation", None)
-        rain_or_snow_bool = True if forecast_rain_or_snow and forecast_rain_or_snow > 0 else False
-
-        forecast_data_yr.append({
-            "Created": datetime.now(),
-            "Longitude": lon,
-            "Latitude": lat,
-            "Date": forecast_date,
-            "Hour": forecast_hour[:5],
-            "Temperature (°C)": round(forecast_temp),
-            "Rain or Snow": rain_or_snow_bool,
-            "Provider": "YR"
-        })
-        hours_collected += 1
-
-    df = pd.DataFrame(forecast_data_yr)
-    df.to_excel("yr_weather_forecast_24h.xlsx", index=False)
-    return df, "Success"
-
-
-# ========== File Loaders ==========
-def load_saved_data(provider: str):
+# ========== File Loader ==========
+def load_saved_data():
     """Load previously saved forecast data from Excel."""
     try:
-        if provider.lower() == "smhi":
-            return pd.read_excel("smhi_weather_forecast_24h.xlsx")
-        elif provider.lower() == "yr":
-            return pd.read_excel("yr_weather_forecast_24h.xlsx")
+        return pd.read_excel("smhi_weather_forecast_24h.xlsx")
     except FileNotFoundError:
         return None
+    
+if __name__ == "__main__":
+    print("Testing SMHI data collection...")
+    print(f"Fetching weather for Stockholm (lat: {latitude}, lon: {longitude})")
+
+    # Test collect_smhi_data
+    df, status = collect_smhi_data()
+
+    if df is not None:
+        print(f"\n✅ Success! Status: {status}")
+        print(f"\nCollected {len(df)} hours of forecast data")
+        print("\nFirst 5 rows:")
+        print(df.head())
+        print("\nFile saved as: smhi_weather_forecast_24h.xlsx")
+    else:
+        print(f"\n❌ Error: {status}")
+
+    # Test load_saved_data
+    print("\n" + "="*50)
+    print("Testing load_saved_data...")
+    loaded_df = load_saved_data()
+
+    if loaded_df is not None:
+        print(f"✅ Successfully loaded {len(loaded_df)} rows from file")
+    else:
+        print("❌ No saved file found")
