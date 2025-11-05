@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 from app import collect_smhi_data
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 st.set_page_config(page_title="SMHI Weather Forecast", page_icon="🌦️", layout="wide")
 st.title("🌦️ SMHI Weather Forecast Dashboard")
@@ -69,4 +71,34 @@ daily_summary_display = daily_summary[["Weekday", "Date", "Rain", "Snow"]]
 st.dataframe(daily_summary_display, use_container_width=True, hide_index=True)
 
 
+#----------- Temperature Trend Plot ----------
 
+st.subheader(f"🌡️ Temperature Trend (12Hours) — {selected_city}")
+
+city_df, msg = collect_smhi_data(lat=latitude, lon=longitude)
+if city_df is not None:
+    city_df["Datetime"] = pd.to_datetime(city_df["Date"] + " " + city_df["Hour"])
+    city_df = city_df.sort_values("Datetime").head(12)  
+
+    fig, ax = plt.subplots(figsize=(8, 3), facecolor="#f0f0f0")  # light grey background
+    ax.plot(city_df["Datetime"], city_df["Temperature (°C)"], color='orange', linewidth=2)
+
+    # Axis labels
+    ax.set_ylabel("Temperature (°C)", fontsize=10)
+    ax.set_title(f"{selected_city} — Next 12 Hours Temperature", fontsize=12)
+    ax.grid(False) # Remove gridlines
+
+    # Removed spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+
+    # adjust/remove ticks
+    ax.tick_params(left=False, bottom=True)
+
+    #  x-axis ticks: show every 2nd hour
+    ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+    st.pyplot(fig)
