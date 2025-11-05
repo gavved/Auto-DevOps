@@ -49,5 +49,4 @@ def collect_smhi_data(lat=latitude, lon=longitude):
         hours_collected += 1
 
     df = pd.DataFrame(forecast_data_smhi)
-    df.to_excel("smhi_weather_forecast_48h.xlsx", index=False)
     return df, "Success"
