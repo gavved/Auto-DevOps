@@ -1,11 +1,12 @@
-name: Build and Push to Docker Hub
+name: FK3 Build & Deploy Workflow
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "FK3" ] #
 
 jobs:
   build-and-push:
+    name: Build and Push Docker Imag
     runs-on: ubuntu-latest
 
     steps:
