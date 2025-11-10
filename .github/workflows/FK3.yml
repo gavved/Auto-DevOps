@@ -1,26 +1,63 @@
-name: FK3 Build & Deploy Workflow
+name: FK3 - Workflow
 
 on:
   push:
-    branches: [ "FK3" ] #
+    branches: [ "FK3" ]
+  workflow_dispatch:
+    inputs:
+      log-errors:
+        description: 'Generate log artifact if tests fail'
+        required: true
+        default: 'true'
+
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Imag
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Log in to Dockerhub
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest
+
+
+  build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: ${{ needs.test.result == 'success' }}
+    env:
+      DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/weather-dashboard
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # login to docker hub using secret credentials
       - name: Log in to Docker Hub
         run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # building docker image using the dockerfile
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/weather-dashboard:latest .
+        run: |
+          docker build -t ${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_TAG }} .
+          docker tag ${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_TAG }} ${{ env.DOCKER_IMAGE }}:latest
 
-      # pushes image to DockerHub account
+      # push docker image to  dockerhub account
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/weather-dashboard:latest
+        run: |
+          docker push ${{ env.DOCKER_IMAGE }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.DOCKER_IMAGE }}:latest
+
+
+
+
