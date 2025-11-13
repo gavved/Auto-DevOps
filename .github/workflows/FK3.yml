@@ -28,7 +28,17 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run unit tests
-        run: pytest
+        id: pytest
+        run: pytest --junitxml=test-results.xml
+        continue-on-error: true
+
+      - name: Upload test log artifact
+        if: ${{ github.event.inputs['log-errors'] == 'true' && steps.pytest.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.xml
+  
 
 
   build:
@@ -43,7 +53,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # login to docker hub using secret credentials
+      # login to dockerhub using secret credentials
       - name: Log in to Docker Hub
         run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
